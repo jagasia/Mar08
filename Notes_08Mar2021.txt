@@ -1,0 +1,588 @@
+Pending:
+	DEBUGGING
+	PLSQL OPTIMIZE LEVEL
+	paramter types, NOCOPY
+------------------------
+We learnt (in Procedures)
+	PLSQL programs that are stored in the database as a database object.
+	when we run the procedure code, it is compiled. Not executed.
+	when we call the procedure from
+		another procedure
+		a plsql program
+			then the procedure was executed
+	
+	The procedure is meant to 
+		do some task
+		to produce some output	(OUT parameter)
+	The procedure can take parameters 
+		IN
+		OUT
+		IN OUT
+
+	Shall we see one example for IN OUT parameter
+
+Task:
+	create a procedure that accepts an INT and returns INT
+		THE procedure name is prcSquare
+	use 1 parameter with IN OUT
+
+CREATE OR REPLACE PROCEDURE PRCSQUARE
+(X IN OUT INT)
+AS
+BEGIN
+    X:=X*X;
+END;
+
+
+DECLARE
+    X INT:=11;
+BEGIN
+    PRCSQUARE(X);
+    DBMS_OUTPUT.PUT_LINE(X);
+END;
+------------------------------------------functions---------------------
+Tell us some oracle functions:
+	MAX
+	MIN
+	SUM
+	AVG
+
+	The above are Aggregate functions
+Can you tell us some single row functions?
+	UPPER
+		SELECT UPPER(FIRST_NAME) FROM EMPLOYEES;
+		the function translates firstname into upper case for each row. One output per row
+	LOWER
+	LENGTH
+	SUBSTR
+		
+A function that works on each row and produce 1 result per row is called as Single row function.
+	We are going to create single row function only
+
+CREATE OR REPLACE FUNCTION FNJAG1
+RETURN INT
+AS
+BEGIN
+    RETURN 100;
+END;
+
+
+
+CREATE OR REPLACE FUNCTION FNUPPER(X VARCHAR2)
+RETURN VARCHAR2
+AS
+Y VARCHAR2(100);
+BEGIN
+--    X:=UPPER(X);        //X IS NOT AN OUT PARAMETER
+    Y:=UPPER(X);
+    RETURN Y;
+END;
+
+Test the function with a query:
+SELECT FIRST_NAME, FNUPPER(FIRST_NAME) FROM EMPLOYEES;
+
+
+Can we use our function in
+	SELECT
+	UPDATE
+	INSERT
+	DELETE
+	
+Yes. we can use our function there
+	INSERT INTO TBLE1 VALUES(FNUPPER('abcd'));
+	UPDATE TABLE1 SET FNAME=FNUPPER('abcd');
+	DELETE FROM TABLE2 WHERE FNUPPER(FNAME)='ABCD';
+
+we can use the function in WHERE condition like above
+we can also use the function in INDEX
+	CREATE INDEX idx1 ON TABLE1(FNUPPER(COLNAME));
+
+	that index will be useful only when the fn is used in where condition of select query
+		SELECT * FROM TABLE1 WHERE FNUPPER(COLNAME)='ABCD';
+
+	tHE index will help in speeding up the select query.
+	suppose we go to library and ask a book. The book is searched in the index sheet first. THen they directly go that particular rack and take the book.
+
+	if you search based on book name, and then index is also based on book name. Only then the index will help
+
+	
+
+fn(a,b,c)		a,b,c	are formal parameter (means, when we create function)
+
+when calling the function
+	fn(x,y,z)	x,y,z 	are actual paramters	(means, when we call the function)
+
+	fn(x=>b, y=>a, z=>c)		named parameters. This is unusual from the
+		usual way is positional parameter.	(means,	x,y,z means for a,b,c based on the position of actual parameters, they are mapped to formal parameters)
+
+
+DROP FUNCTION FNJAG1;
+
+
+Task:
+	Suppose, if we create a function fnBalance that accepts an account number as input.
+	And return the account balance as output.
+	Hint: use Bank schema	
+
+	This looks little complicated. to simplify this, 
+
+fnWithdraw:	Create a function that accepts acnumber as input and returns the total withdraw amount.
+fnDeposit:	Create a function that accepts acnumber as input and returns the total deposit amount.
+
+fnBalance can use these 2 functions to produce output (balance) easily
+
+------------------------------
+CREATE OR REPLACE FUNCTION fnWithdraw(acno VARCHAR2)
+RETURN INT
+AS
+w int:=0;
+c int;
+BEGIN
+    select count(*) into c from trandetails where acnumber=acno and transaction_type='Withdrawal';
+    if c=0 then
+        return 0;
+    end if;
+    SELECT SUM(TRANSACTION_AMOUNT) into w
+    FROM TRANDETAILS
+    WHERE ACNUMBER=acno
+    AND TRANSACTION_TYPE='Withdrawal'
+    GROUP BY ACNUMBER;
+    RETURN w;
+END;
+
+
+-------------------------------
+CREATE OR REPLACE FUNCTION fnDeposit(acno VARCHAR2)
+RETURN INT
+AS
+w int:=0;
+c int;
+BEGIN
+    select count(*) into c from trandetails where acnumber=acno and transaction_type='Deposit';
+    if c=0 then
+        return 0;
+    end if;
+    SELECT SUM(TRANSACTION_AMOUNT) into w
+    FROM TRANDETAILS
+    WHERE ACNUMBER=acno
+    AND TRANSACTION_TYPE='Deposit'
+    GROUP BY ACNUMBER;
+    RETURN w;
+END;
+-------------------------------------------
+
+CREATE OR REPLACE FUNCTION fnBalance (acno varchar2)
+return int
+as
+ob int;
+w int;
+d int;
+balance int;
+begin
+    select opening_balance INTO ob from account where acnumber=acno;    
+    w:=fnwithdraw(acno);
+    d:=fndeposit(acno);
+    balance:=ob+d-w;
+    return balance;
+end;
+
+
+-------------------------------------------
+
+
+select acnumber, fndeposit(acnumber), fnwithdraw(acnumber), fnBalance(acnumber)
+from account;
+
+
+
+WE HAVE MISSED LEARNING 
+	NULL RELATED FUNCTIONS IN ORACLE
+
+	NVL			replace NULL with given value	NVL(INPUT,NULLVAL)
+	NVL2			NVL2(INPUT, NOT NULLVAL, NULLVAL)
+	COALESCE		any number of argument. returns the first not null found from left. returns null if no not null is found
+	NULLIF			return null if both parameters are equal
+
+	decode			short form of case when then else end. decode is function
+		SELECT DECODE(X, A, B, C, D, E) FROM DUAL
+		X is the input
+			if X = A, then return B
+			if X = C, then return D
+			else return E
+
+
+ex:
+	SELECT job_id, DECODE (JOB_ID, 'AD_PRES','President', 'AD_VP',
+'Vice President','IT_PROG','Programmer','Employee') from employees;
+
+
+
+create or replace function fn1(x int)		--FORMAL Parameter is X
+....
+
+while calling the function 
+	fn1(a)					--ACTUAL PARAMETER is a
+
+in the above scenario? which is formal parameter? and which is actual parameter?
+
+
+Every input parameter is passed by reference.		SURPRISE
+What about OUT parameter and IN OUT parameter???
+	by default, OUT parameter is by value
+
+if it is by value, what does it mean? 
+	The value of procedure variable is copied to the actual parameter (actual parameter means? the variable passed while calling the procedure)
+
+	this makes, 2 copy of values when OUT paramters are used.
+
+If the output parameter is a LOB, then it is very risky to keep 2 copies of LOB 
+
+so we can use NOCOPY hint with OUT or IN OUT parameters
+
+Lets learn PACKAGES and come back to pending topics
+-------------------
+what are packages?
+	from what we learnt about packages earlier, we understand that 
+		packages group programs
+	here, in PLSQL, a package can group
+		PROCEDURES
+		FUNCTIONS
+		TYPES
+		
+
+WHILE creating packages, there are 2 parts of package
+
+	HEAD
+	BODY
+
+Head is called as Specification
+	Head should be created first. Befor a body is created.
+	A body can contain many programs than what are declared in Head.
+	But only those programs declared in head are available for access from outside
+
+	DBMS_OUTPUT
+		PUT
+		PUT_LINE
+
+	There may be lot of functions and procedures inside the package. (may be for internal purpose)
+
+	We created 
+		fnWithdraw
+		fnDeposit
+		fnBalance	(we can declare only fnBalance in the package specification (head))
+
+	fnBalance need other 2 functions for its evaluation. But since only fnBalance is declared in package spec, only fnBalance can be called from outside.
+
+Head, can contain only declaration. complete code of those programs are in body
+
+Why are we declaring fnBalance in Head? only then it can be called. (package_name.fn_name)
+	
+Which one should be created first?	HEAD or BODY?
+	HEAD (SPEC) Should be created first
+
+If we declare an object in the specification, then it must be defined in th body.
+
+
+CREATE or replace PACKAGE pkDeb
+as
+    FUNCTION fnBalance(acno int) return int;
+end;
+
+CREATE OR REPLACE PACKAGE BODY pkDeb
+as
+    FUNCTION fnWithdraw(acno VARCHAR2)
+        RETURN INT
+    AS
+    w int:=0;
+    c int;
+    BEGIN
+        select count(*) into c from trandetails where acnumber=acno and transaction_type='Withdrawal';
+        if c=0 then
+            return 0;
+        end if;
+        SELECT SUM(TRANSACTION_AMOUNT) into w
+            FROM TRANDETAILS
+            WHERE ACNUMBER=acno
+            AND TRANSACTION_TYPE='Withdrawal'
+            GROUP BY ACNUMBER;
+        RETURN w;
+    END;
+
+
+-------------------------------
+    FUNCTION fnDeposit(acno VARCHAR2)
+    RETURN INT
+    AS
+    w int:=0;
+    c int;
+    BEGIN
+        select count(*) into c from trandetails where acnumber=acno and transaction_type='Deposit';
+        if c=0 then
+            return 0;
+        end if;
+        SELECT SUM(TRANSACTION_AMOUNT) into w
+        FROM TRANDETAILS
+        WHERE ACNUMBER=acno
+        AND TRANSACTION_TYPE='Deposit'
+        GROUP BY ACNUMBER;
+        RETURN w;
+    END;
+-------------------------------------------
+
+    FUNCTION fnBalance (acno varchar2)
+    return int
+    as
+    ob int;
+    w int;
+    d int;
+    balance int;
+    begin
+        select opening_balance INTO ob from account where acnumber=acno;    
+        w:=fnwithdraw(acno);
+        d:=fndeposit(acno);
+        balance:=ob+d-w;
+        return balance;
+    end;
+
+end;
+
+
+-----------------------------
+
+TYPE CREC IS RECORD(CID VARCHAR2(100), FN VARCHAR2(100));
+
+
+WHY we need type?
+	suppose we need to return composite type values from a function
+	in our prev example, fnBalance, fnWithdraw, fnDeposit,
+	the functions returned only scalar value. (means, 1 value)
+
+	if the function needs to return multiple values, ???
+		a function return only 1 type. THat type can be composite. 
+	
+	What are the composite types avaiable in PLSQL?
+
+
+Activity:
+	Identify the following:
+		Associative array (index-by table)
+			is a collection type that associates a unique key with a value.
+			single dimensional, unbounded, sparse collections of homogeneous elements.
+		Nested table.
+		Varray.
+		Record.
+
+
+
+TYPE rec1 is RECORD (EID INT, FN VARCHAR2(100));
+    TYPE ct IS TABLE OF employees%rowtype INDEX BY BINARY_INTEGER;
+
+
+
+create or replace NONEDITIONABLE PACKAGE pkDeb
+as
+    FUNCTION fnBalance(acno varchar2) return int;
+        PROCEDURE PRC1(ACNO VARCHAR2);
+end;
+
+
+
+create or replace NONEDITIONABLE PACKAGE BODY pkDeb
+as
+    TYPE CREC IS RECORD(CID VARCHAR2(100), FN VARCHAR2(100));
+    TYPE rec1 is RECORD (EID INT, FN VARCHAR2(100));
+    TYPE ct IS TABLE OF employees%rowtype INDEX BY BINARY_INTEGER;
+    TYPE TRANTYPE IS TABLE OF TRANDETAILS%ROWTYPE INDEX BY PLS_INTEGER;
+    
+    FUNCTION fnTrans (acno VARCHAR2)
+        RETURN TRANTYPE
+    AS
+        RES TRANTYPE;
+        i int;
+    BEGIN
+        i:=1;
+        FOR REC IN (SELECT * FROM TRANDETAILS WHERE ACNUMBER=ACNO)
+        LOOP
+            RES(i):=REC;
+            i:=i+1;
+        END LOOP;
+        return res;
+    END;
+    
+    PROCEDURE PRC1(ACNO VARCHAR2)
+    AS
+        res trantype;
+    BEGIN
+            res:=fnTrans(ACNO);
+            FOR I IN res.FIRST..res.LAST
+            LOOP
+                IF res.exists(I) then
+                    dbms_output.put_line(res(I).acnumber||' '||RES(I).transaction_amount);
+                END IF;
+            END loop;
+    END;
+    
+    
+    FUNCTION fnWithdraw(acno VARCHAR2)
+        RETURN INT
+    AS
+    w int:=0;
+    c int;
+    BEGIN
+        select count(*) into c from trandetails where acnumber=acno and transaction_type='Withdrawal';
+        if c=0 then
+            return 0;
+        end if;
+        SELECT SUM(TRANSACTION_AMOUNT) into w
+            FROM TRANDETAILS
+            WHERE ACNUMBER=acno
+            AND TRANSACTION_TYPE='Withdrawal'
+            GROUP BY ACNUMBER;
+        RETURN w;
+    END;
+
+
+-------------------------------
+    FUNCTION fnDeposit(acno VARCHAR2)
+    RETURN INT
+    AS
+    w int:=0;
+    c int;
+    BEGIN
+        select count(*) into c from trandetails where acnumber=acno and transaction_type='Deposit';
+        if c=0 then
+            return 0;
+        end if;
+        SELECT SUM(TRANSACTION_AMOUNT) into w
+        FROM TRANDETAILS
+        WHERE ACNUMBER=acno
+        AND TRANSACTION_TYPE='Deposit'
+        GROUP BY ACNUMBER;
+        RETURN w;
+    END;
+-------------------------------------------
+
+    FUNCTION fnBalance (acno varchar2)
+    return int
+    as
+    ob int;
+    w int;
+    d int;
+    balance int;
+    begin
+        select opening_balance INTO ob from account where acnumber=acno;    
+        w:=fnwithdraw(acno);
+        d:=fndeposit(acno);
+        balance:=ob+d-w;
+        return balance;
+    end;
+
+end;
+
+=======================
+What is stateless and stateful package?
+
+CREATE OR REPLACE PACKAGE PK5
+ IS
+--PRAGMA SERIALLY_REUSABLE;		--THIS OPTION MAKES PACKAGE STATELESS
+        NO1 INT:=100;
+END;
+This is a bodiless  package
+
+
+begin
+    PK5.NO1:=200;
+    DBMS_OUTPUT.PUT_LINE('DONE');
+end;
+
+BEGIN
+    DBMS_OUTPUT.PUT_LINE(PK5.NO1);
+END;
+
+--------------------------
+
+
+
+
+
+
+
+IN PACKAGE BODY,
+
+i call a function that is defined in the bottom. The function is not available to be called. 
+TO call a function, that function must be defined above current statement.
+
+
+either the function should be defined above the function call. Or
+it should be declared above the function call	(forward declaration)
+
+-------------------
+Overloading
+	what is overloading?
+	What are the overloading considerations?
+
+	Procedures or functions can be overloaded only inside package.
+
+	 Also, you cannot overload two subprograms 
+		if their formal parameters differ only in name or parameter mode
+
+	You need to make the signatures different (ignoring the return type) 
+		otherwise the compiler won't choose for you.
+
+
+--CREATE OR REPLACE PACKAGE PK111 IS
+--    PROCEDURE PRC1(A INT);
+--    PROCEDURE PRC1(B INT);		--THIS IS NOT OVERLOADING. This cause PLS-00307: too many declarations of 'PRC1' match this call
+--END;
+--
+--CREATE OR REPLACE PACKAGE BODY PK111 IS
+--    PROCEDURE PRC1(A INT)
+--    AS
+--    BEGIN
+--        DBMS_OUTPUT.PUT_LINE('You are calling first procedure');
+--    END;
+--    
+--    PROCEDURE PRC1(b INT)
+--    AS
+--    BEGIN
+--        DBMS_OUTPUT.PUT_LINE('You are calling second procedure');
+--    END;
+--END;
+
+
+DECLARE
+    A INT:=0;
+BEGIN
+        PK111.PRC1(A);
+END;
+
+-----------------------------------------------------------------
+DEBUGGING
+	Tracing Logical errors
+
+			no compilation error. No run time rror also. we get wrong output. Called as logical error
+	DBMS_UTILITY
+
+CREATE OR REPLACE FUNCTION fn111(no int)
+return dbms_utility.dblink_array
+as
+    X INT;
+    RES DBMS_UTILITY.DBLINK_ARRAY;
+begin
+    for i in 0 .. no
+    loop
+        X:=100+I;
+        SELECT FIRST_NAME INTO RES(X) FROM EMPLOYEES WHERE EMPLOYEE_ID=X;
+    end loop;
+    RETURN RES;
+end;
+
+DECLARE
+    RES DBMS_UTILITY.DBLINK_ARRAY;
+BEGIN
+    RES:=FN111(106);
+    FOR I IN RES.FIRST .. RES.LAST
+    LOOP
+        DBMS_OUTPUT.PUT_LINE(RES(I));
+    END LOOP;
+END;

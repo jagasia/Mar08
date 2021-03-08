@@ -1,0 +1,110 @@
+show parameter plsql_optimize_level
+
+ALTER SESSION SET PLSQL_OPTIMIZE_LEVEL = 1
+
+Case 1: PLSQL_OPTIMIZE_LEVEL = 0
+
+This level represents 'No Optimization’ mode of the compiler. The compiler only maintains the code evaluation order and executes it without any efforts on code optimization.
+
+DECLARE
+L_START_TIME NUMBER;
+L_END_TIME NUMBER;
+A NUMBER; B NUMBER; C NUMBER;
+BEGIN
+L_START_TIME := DBMS_UTILITY.GET_TIME();
+FOR I IN 1..1000000000
+LOOP
+A := 1;
+B := 1;
+C := A+1;
+END LOOP;
+L_END_TIME := DBMS_UTILITY.GET_TIME();
+DBMS_OUTPUT.PUT_LINE('Execution time:'||TO_CHAR(L_END_TIME - L_START_TIME));
+END;
+/
+
+--------------------------
+Case 2: PLSQL_OPTIMIZE_LEVEL = 1
+
+This level represents ‘Elementary and eliminative Optimization’ level by maintaining the same code order. The compiler optimizes the code by eliminating the code of irrelevant logic.
+
+We shall re execute the previous PL/SQL block and check the difference.
+
+Conn / as sysdba
+Connected.
+
+ALTER SESSION SET PLSQL_OPTIMIZE_LEVEL = 1;
+
+DECLARE
+L_START_TIME NUMBER;
+L_END_TIME NUMBER;
+A NUMBER; B NUMBER; C NUMBER;
+BEGIN
+L_START_TIME := DBMS_UTILITY.GET_TIME();
+FOR I IN 1..1000000000
+LOOP
+A := 1;
+B := 1;
+C := A+1;
+END LOOP;
+L_END_TIME := DBMS_UTILITY.GET_TIME();
+DBMS_OUTPUT.PUT_LINE(‘Execution time:’||TO_CHAR(L_END_TIME – L_START_TIME));
+END;
+/
+
+
+Execution time:7112
+
+PL/SQL procedure successfully completed.
+
+Note that the execution time has reduced by 60% during this optimization level.
+
+Case 3: PLSQL_OPTIMIZE_LEVEL = 2
+
+This is the standard level of optimization where the compiler intelligently does the code refactoring and uses advanced optimization techniques to modify the code structure in order to achieve the best.
+
+Re executing the previous PL/SQL block to compare the ‘Execution time’ results.
+
+Conn / as sysdba
+Connected.
+
+ALTER SESSION SET PLSQL_OPTIMIZE_LEVEL = 2;
+
+Session altered.
+
+DECLARE
+L_START_TIME NUMBER;
+L_END_TIME NUMBER;
+A NUMBER; B NUMBER; C NUMBER;
+BEGIN
+L_START_TIME := DBMS_UTILITY.GET_TIME();
+FOR I IN 1..1000000000
+LOOP
+A := 1;
+B := 1;
+C := A+1;
+END LOOP;
+L_END_TIME := DBMS_UTILITY.GET_TIME();
+DBMS_OUTPUT.PUT_LINE(‘Execution time:’||TO_CHAR(L_END_TIME – L_START_TIME));
+END;
+/
+
+Execution time:0
+
+PL/SQL procedure successfully completed.
+
+Just observe the incredible intelligence of the PL/SQL compiler. The complete code has been re-structured. Analytically, the code inside the FOR loop is not relevant to the loop. So it has been moved outside the loop and now, the loop is completely ignored by the compiler. Therefore, the execution time comes out to be zero.
+
+Case 4: PLSQL_OPTIMIZE_LEVEL = 3
+
+This is the latest optimization level introduced in Oracle 11g. It is a sort of ‘Forced’ optimization level, which Oracle terms as ‘High Priority’ optimization. The code optimizer does the code refactoring and automatically inlines all program calls in the program unit.
+
+Conn / as sysdba
+Connected.
+
+ALTER SESSION SET PLSQL_OPTIMIZE_LEVEL = 3;
+
+Session altered.
+
+As mentioned earlier, the parameter is treated as the object compilation factors. Hence it is stored in the object library unit and can be queried in
+[ALL | DBA | USER]_PLSQL_OBJECT_SETTINGS.
